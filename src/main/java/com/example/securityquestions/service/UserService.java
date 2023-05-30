@@ -6,6 +6,7 @@ import com.example.securityquestions.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -50,15 +51,18 @@ public class UserService {
     }
 
     private boolean validateSecurityQuestionAnswers(User user, List<SecurityQuestionAnswer> securityQuestionAnswers) {
-        List<SecurityQuestionAnswer> storedAnswers = user.getSecurityQuestionAnswers();
-        if (securityQuestionAnswers.size() != storedAnswers.size()) {
+        List<SecurityQuestionAnswer> storedAnswersForUser = user.getSecurityQuestionAnswers();
+
+        List<String> storedQuestionsForUser = getSecurityQuestionsForUser(user.getUsername());
+
+        if (storedQuestionsForUser.size() != storedAnswersForUser.size()) {
             return false;
         }
 
         // Compare the provided answers with the stored answers
         for (SecurityQuestionAnswer providedAnswer : securityQuestionAnswers) {
             boolean matchFound = false;
-            for (SecurityQuestionAnswer storedAnswer : storedAnswers) {
+            for (SecurityQuestionAnswer storedAnswer : storedAnswersForUser) {
                 if (providedAnswer.getQuestion().equals(storedAnswer.getQuestion())
                         && providedAnswer.getAnswer().equals(storedAnswer.getAnswer())) {
                     matchFound = true;
@@ -71,5 +75,17 @@ public class UserService {
         }
 
         return true;
+    }
+
+    public List<String> getSecurityQuestionsForUser(String username) {
+        User user = userRepository.findUserByUsername(username);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        List<SecurityQuestionAnswer> securityQuestionAnswers = user.getSecurityQuestionAnswers();
+        return securityQuestionAnswers.stream()
+                .map(SecurityQuestionAnswer::getQuestion)
+                .collect(Collectors.toList());
     }
 }
